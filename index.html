@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carta Gantt - Facilitador Psicológico PAC 2025</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .gantt-cell { min-height: 48px; }
+        .sticky-header { position: sticky; top: 0; z-index: 20; }
+        .sticky-phase { position: sticky; top: 64px; z-index: 10; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-50 to-slate-100">
+    <div class="min-h-screen p-6">
+        <div class="max-w-7xl mx-auto">
+            <!-- Header -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-800">
+                            Carta Gantt - Facilitador/a Acompañamiento Psicológico
+                        </h1>
+                        <p class="text-sm text-gray-600">
+                            Programa: Orientación y Asesorías Ciudadanas PAC | Oct 15 - Dic 31, 2025
+                        </p>
+                    </div>
+                    <button onclick="exportToCSV()" class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition">
+                        📥 Exportar CSV
+                    </button>
+                </div>
+
+                <!-- Filtros -->
+                <div class="flex gap-2 flex-wrap mb-4" id="weekFilters"></div>
+
+                <!-- Leyenda -->
+                <div class="flex gap-6 text-sm flex-wrap mb-4">
+                    <div class="flex items-center gap-2">
+                        <div class="w-4 h-4 bg-blue-600 rounded"></div>
+                        <span>P = Presencial (Mar/Jue full-time)</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-4 h-4 bg-green-600 rounded"></div>
+                        <span>R = Remoto (Lun/Mié/Vie)</span>
+                    </div>
+                </div>
+
+                <!-- Estadísticas -->
+                <div class="grid grid-cols-4 gap-4 text-sm">
+                    <div class="bg-blue-50 p-3 rounded">
+                        <div class="text-blue-900 font-bold">20 Tareas</div>
+                        <div class="text-blue-700 text-xs">Total actividades</div>
+                    </div>
+                    <div class="bg-purple-50 p-3 rounded">
+                        <div class="text-purple-900 font-bold">6 Entregables</div>
+                        <div class="text-purple-700 text-xs">Documentos clave</div>
+                    </div>
+                    <div class="bg-green-50 p-3 rounded">
+                        <div class="text-green-900 font-bold">11 Semanas</div>
+                        <div class="text-green-700 text-xs">Duración programa</div>
+                    </div>
+                    <div class="bg-orange-50 p-3 rounded">
+                        <div class="text-orange-900 font-bold">22 Días</div>
+                        <div class="text-orange-700 text-xs">Presenciales (Mar/Jue)</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gantt Chart -->
+            <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+                <div id="ganttChart"></div>
+            </div>
+
+            <!-- Recomendaciones -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mt-6">
+                <h2 class="text-lg font-bold text-gray-800 mb-4">⚠️ Recomendaciones del PM</h2>
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div>
+                        <h3 class="font-bold text-sm text-gray-800 mb-2">Estrategia de Ejecución:</h3>
+                        <ul class="space-y-2 text-sm text-gray-700">
+                            <li>• <strong>Mar/Jue Presencial:</strong> Entrevistas, capacitaciones, atención directa</li>
+                            <li>• <strong>Lun/Mié/Vie Remoto:</strong> Diseño, análisis, documentación</li>
+                            <li>• <strong>Operativos Flexibles:</strong> Viernes para operativos DIDECO</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-sm text-gray-800 mb-2">Hitos Críticos:</h3>
+                        <ul class="space-y-2 text-sm text-gray-700">
+                            <li>→ <strong>Nov 15:</strong> Catastro emergencias + cierre diagnóstico</li>
+                            <li>→ <strong>Dic 6:</strong> Versión 1 manual completa</li>
+                            <li>→ <strong>Dic 20:</strong> Documentos finalizados</li>
+                            <li>→ <strong>Dic 27:</strong> Entrega final</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const weeks = [
+            { id: 'w1', label: 'Oct 15-18', days: ['Mié 15', 'Jue 16', 'Vie 17'] },
+            { id: 'w2', label: 'Oct 21-25', days: ['Lun 21', 'Mar 22', 'Mié 23', 'Jue 24', 'Vie 25'] },
+            { id: 'w3', label: 'Oct 28-Nov 1', days: ['Lun 28', 'Mar 29', 'Mié 30', 'Jue 31', 'Vie 1'] },
+            { id: 'w4', label: 'Nov 4-8', days: ['Lun 4', 'Mar 5', 'Mié 6', 'Jue 7', 'Vie 8'] },
+            { id: 'w5', label: 'Nov 11-15', days: ['Lun 11', 'Mar 12', 'Mié 13', 'Jue 14', 'Vie 15'] },
+            { id: 'w6', label: 'Nov 18-22', days: ['Lun 18', 'Mar 19', 'Mié 20', 'Jue 21', 'Vie 22'] },
+            { id: 'w7', label: 'Nov 25-29', days: ['Lun 25', 'Mar 26', 'Mié 27', 'Jue 28', 'Vie 29'] },
+            { id: 'w8', label: 'Dic 2-6', days: ['Lun 2', 'Mar 3', 'Mié 4', 'Jue 5', 'Vie 6'] },
+            { id: 'w9', label: 'Dic 9-13', days: ['Lun 9', 'Mar 10', 'Mié 11', 'Jue 12', 'Vie 13'] },
+            { id: 'w10', label: 'Dic 16-20', days: ['Lun 16', 'Mar 17', 'Mié 18', 'Jue 19', 'Vie 20'] },
+            { id: 'w11', label: 'Dic 23-27', days: ['Lun 23', 'Mar 24', 'Mié 26', 'Jue 27'] }
+        ];
+
+        const tasks = [
+            {
+                phase: 'FASE 1: INDUCCIÓN Y DIAGNÓSTICO',
+                color: 'bg-blue-500',
+                items: [
+                    { name: 'Inducción y Contactos Clave', schedule: { w1: { Mar: 'P', Jue: 'P' }, w2: { Mar: 'P', Jue: 'P' } } },
+                    { name: 'Entrevistas a Facilitadores', schedule: { w2: { Mar: 'P', Jue: 'P' }, w3: { Mar: 'P', Jue: 'P' }, w4: { Mar: 'P', Jue: 'P' } } },
+                    { name: 'Vinculación Prevencionista/Salud', schedule: { w3: { Jue: 'P' }, w4: { Mar: 'P' } } },
+                    { name: 'Catastro Servicios Emergencia', schedule: { w4: { Vie: 'R' }, w5: { Lun: 'R', Mié: 'R' } } },
+                    { name: 'Revisión Procesos Existentes', schedule: { w2: { Lun: 'R', Mié: 'R', Vie: 'R' }, w3: { Lun: 'R', Mié: 'R', Vie: 'R' }, w4: { Lun: 'R', Mié: 'R' } } },
+                    { name: 'Síntesis y Gap Analysis', schedule: { w5: { Vie: 'R' } } }
+                ]
+            },
+            {
+                phase: 'FASE 2: DISEÑO Y DESARROLLO',
+                color: 'bg-purple-500',
+                items: [
+                    { name: 'Diseño Estrategias Contención', schedule: { w6: { Lun: 'R', Mié: 'R', Vie: 'R' }, w7: { Lun: 'R', Mié: 'R' } } },
+                    { name: 'Manual/Protocolo Atención v1', schedule: { w6: { Lun: 'R', Vie: 'R' }, w7: { Lun: 'R', Vie: 'R' }, w8: { Lun: 'R', Mié: 'R', Vie: 'R' } } },
+                    { name: 'Propuestas Mejoramiento', schedule: { w7: { Vie: 'R' }, w8: { Vie: 'R' }, w9: { Lun: 'R' } } },
+                    { name: 'Protocolo Socorro/Emergencias', schedule: { w8: { Lun: 'R' }, w9: { Mié: 'R' } } },
+                    { name: 'Validación Borradores', schedule: { w8: { Mar: 'P' }, w9: { Mar: 'P' }, w10: { Mar: 'P' } } },
+                    { name: 'Versión Final Documentos', schedule: { w9: { Vie: 'R' }, w10: { Lun: 'R', Mié: 'R', Vie: 'R' }, w11: { Lun: 'R', Mié: 'R' } } }
+                ]
+            },
+            {
+                phase: 'FASE 3: EJECUCIÓN CONTINUA',
+                color: 'bg-green-500',
+                items: [
+                    { name: 'Atención Presencial Usuarios', schedule: { w1: { Jue: 'P' }, w2: { Mar: 'P', Jue: 'P' }, w3: { Mar: 'P', Jue: 'P' }, w4: { Mar: 'P', Jue: 'P' }, w5: { Mar: 'P', Jue: 'P' }, w6: { Mar: 'P', Jue: 'P' }, w7: { Mar: 'P', Jue: 'P' }, w8: { Mar: 'P', Jue: 'P' }, w9: { Mar: 'P', Jue: 'P' }, w10: { Mar: 'P', Jue: 'P' }, w11: { Mar: 'P', Jue: 'P' } } },
+                    { name: 'Acompañamiento Público Preferencial', schedule: { w2: { Jue: 'P' }, w3: { Jue: 'P' }, w4: { Jue: 'P' }, w5: { Jue: 'P' }, w6: { Jue: 'P' }, w7: { Jue: 'P' }, w8: { Jue: 'P' }, w9: { Jue: 'P' }, w10: { Jue: 'P' }, w11: { Jue: 'P' } } },
+                    { name: 'Reuniones Semanales Equipo', schedule: { w2: { Jue: 'P' }, w3: { Jue: 'P' }, w4: { Jue: 'P' }, w5: { Jue: 'P' }, w6: { Jue: 'P' }, w7: { Jue: 'P' }, w8: { Jue: 'P' }, w9: { Jue: 'P' }, w10: { Jue: 'P' }, w11: { Jue: 'P' } } },
+                    { name: 'Capacitaciones Semanales', schedule: { w6: { Mar: 'P' }, w7: { Mar: 'P' }, w8: { Mar: 'P' }, w9: { Mar: 'P' }, w10: { Mar: 'P' }, w11: { Mar: 'P' } } },
+                    { name: 'Operativos DIDECO Terreno', schedule: { w3: { Vie: 'R' }, w5: { Vie: 'R' }, w7: { Vie: 'R' }, w9: { Vie: 'R' } } },
+                    { name: 'Registro/Documentación Casos', schedule: { w3: { Lun: 'R' }, w4: { Vie: 'R' }, w5: { Lun: 'R' }, w6: { Vie: 'R' }, w7: { Lun: 'R' }, w8: { Vie: 'R' }, w9: { Lun: 'R' }, w10: { Vie: 'R' }, w11: { Lun: 'R' } } }
+                ]
+            },
+            {
+                phase: 'CIERRE Y ENTREGA',
+                color: 'bg-red-500',
+                items: [
+                    { name: 'Coordinación Evaluación Satisfacción', schedule: { w10: { Lun: 'R' }, w11: { Mié: 'R' } } },
+                    { name: 'Entrega Final y Cierre', schedule: { w11: { Jue: 'P' } } }
+                ]
+            }
+        ];
+
+        let selectedWeek = 'all';
+
+        function renderFilters() {
+            const container = document.getElementById('weekFilters');
+            let html = `<button onclick="setWeek('all')" class="px-3 py-1 rounded text-sm ${selectedWeek === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}">Ver Todas</button>`;
+            weeks.forEach(w => {
+                html += `<button onclick="setWeek('${w.id}')" class="px-3 py-1 rounded text-sm ${selectedWeek === w.id ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}">${w.label}</button>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function setWeek(weekId) {
+            selectedWeek = weekId;
+            renderFilters();
+            renderGantt();
+        }
+
+        function getDayType(day) {
+            return (day.includes('Mar') || day.includes('Jue')) ? 'presencial' : 'remoto';
+        }
+
+        function renderGantt() {
+            const filteredWeeks = selectedWeek === 'all' ? weeks : weeks.filter(w => w.id === selectedWeek);
+            let html = '';
+
+            // Header
+            html += '<div class="sticky-header border-b-2 border-gray-300 bg-gray-100"><div class="grid grid-cols-12">';
+            html += '<div class="col-span-3 p-2 text-xs font-bold text-gray-700 border-r border-gray-300">ACTIVIDADES</div>';
+            html += '<div class="col-span-9 grid gap-px bg-gray-300" style="grid-template-columns: repeat(' + filteredWeeks.length + ', 1fr);">';
+            filteredWeeks.forEach(week => {
+                html += `<div class="bg-gray-100 p-1 text-center"><div class="text-xs font-bold text-gray-700">${week.label}</div>`;
+                html += '<div class="grid grid-cols-5 gap-px mt-1">';
+                week.days.forEach(day => {
+                    const dayShort = day.split(' ')[0];
+                    const isPresencial = getDayType(day) === 'presencial';
+                    html += `<div class="text-[10px] ${isPresencial ? 'font-bold text-blue-700' : 'text-gray-600'}">${dayShort}</div>`;
+                });
+                html += '</div></div>';
+            });
+            html += '</div></div></div>';
+
+            // Tasks
+            tasks.forEach(phase => {
+                html += `<div class="border-b border-gray-200"><div class="${phase.color} text-white p-3 text-sm font-bold sticky-phase">${phase.phase}</div>`;
+                phase.items.forEach(task => {
+                    html += '<div class="border-b border-gray-100"><div class="grid grid-cols-12 gantt-cell">';
+                    html += `<div class="col-span-3 p-3 bg-gray-50 border-r border-gray-200 flex items-center"><span class="text-xs text-gray-700 font-medium">${task.name}</span></div>`;
+                    html += '<div class="col-span-9 grid gap-px bg-gray-200" style="grid-template-columns: repeat(' + filteredWeeks.length + ', 1fr);">';
+                    filteredWeeks.forEach(week => {
+                        html += '<div class="bg-white"><div class="grid grid-cols-5 h-full">';
+                        week.days.forEach(day => {
+                            const dayShort = day.split(' ')[0];
+                            const hasActivity = task.schedule[week.id]?.[dayShort];
+                            const dayType = getDayType(day);
+                            const bgClass = hasActivity === 'P' ? 'bg-blue-600 text-white' : hasActivity === 'R' ? 'bg-green-600 text-white' : dayType === 'presencial' ? 'bg-blue-50' : 'bg-white';
+                            html += `<div class="border-r border-gray-100 flex items-center justify-center text-xs font-bold ${bgClass}" title="${day} - ${hasActivity || 'Sin actividad'}">${hasActivity || ''}</div>`;
+                        });
+                        html += '</div></div>';
+                    });
+                    html += '</div></div></div>';
+                });
+                html += '</div>';
+            });
+
+            document.getElementById('ganttChart').innerHTML = html;
+        }
+
+        function exportToCSV() {
+            let csv = 'Fase,Tarea,';
+            weeks.forEach(w => w.days.forEach(d => csv += `${w.label}-${d},`));
+            csv += '\n';
+            tasks.forEach(phase => {
+                phase.items.forEach(task => {
+                    csv += `"${phase.phase}","${task.name}",`;
+                    weeks.forEach(week => {
+                        week.days.forEach(day => {
+                            const dayShort = day.split(' ')[0];
+                            csv += `${task.schedule[week.id]?.[dayShort] || ''},`;
+                        });
+                    });
+                    csv += '\n';
+                });
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'gantt_facilitador_psicologico.csv';
+            a.click();
+        }
+
+        renderFilters();
+        renderGantt();
+    </script>
+</body>
+</html>
